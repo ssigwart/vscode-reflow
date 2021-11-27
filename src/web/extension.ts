@@ -48,20 +48,23 @@ function getReflowCommand(): vscode.Disposable
 				selection = new vscode.Selection(line, 0, line, docLine.range.end.character);
 
 				// Should we extend backwards and forwards?
-				let extendingPrefixMatch = /\s*([*]|\/\/)?\s*/.exec(docLine.text);
-				if (extendingPrefixMatch !== null)
+				if (!/\s*\/[*].*[*]\//.test(docLine.text))
 				{
-					const extendingPrefix = extendingPrefixMatch[0];
-					let acceptLine = function(line: number) {
-						const docLine = doc.lineAt(line);
-						return !docLine.isEmptyOrWhitespace && docLine.text.startsWith(extendingPrefix);
-					};
-					// Go back
-					for (let backLine = line - 1; backLine > 0 && acceptLine(backLine); backLine--)
-						selection = new vscode.Selection(backLine, 0, line, docLine.range.end.character);
-					// Go forwards
-					for (let nextLine = line + 1; nextLine < doc.lineCount && acceptLine(nextLine); nextLine++)
-						selection = new vscode.Selection(selection.start.line, 0, nextLine, doc.lineAt(nextLine).range.end.character);
+					let extendingPrefixMatch = /\s*([*]|\/\/)?\s*/.exec(docLine.text);
+					if (extendingPrefixMatch !== null)
+					{
+						const extendingPrefix = extendingPrefixMatch[0];
+						let acceptLine = function(line: number) {
+							const docLine = doc.lineAt(line);
+							return !docLine.isEmptyOrWhitespace && docLine.text.startsWith(extendingPrefix);
+						};
+						// Go back
+						for (let backLine = line - 1; backLine > 0 && acceptLine(backLine); backLine--)
+							selection = new vscode.Selection(backLine, 0, line, docLine.range.end.character);
+						// Go forwards
+						for (let nextLine = line + 1; nextLine < doc.lineCount && acceptLine(nextLine); nextLine++)
+							selection = new vscode.Selection(selection.start.line, 0, nextLine, doc.lineAt(nextLine).range.end.character);
+					}
 				}
 			}
 			else
@@ -80,7 +83,7 @@ function getReflowCommand(): vscode.Disposable
 			let finalTextSuffix = "";
 			if (selection.isSingleLine)
 			{
-				const match = /^(\s*)(\/[*]{1,2})\s+(.*)\s*([*]+\/)$/.exec(text);
+				const match = /^(\s*)(\/[*]{1,2})\s+(.*)\s+([*]+\/)$/.exec(text);
 				if (match)
 				{
 					const indent = match[1];

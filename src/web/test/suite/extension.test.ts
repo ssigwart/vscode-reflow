@@ -1,29 +1,39 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 
+let uriChangeResolvers: Map<vscode.Uri, () => any> = new Map();
+
 async function testReflow(initialText: string, expectedText: string, selection: vscode.Selection): Promise<void>
 {
 	await vscode.workspace.openTextDocument({
-		language: "text"
+		language: "text",
+		content: initialText
 	}).then(async (doc: vscode.TextDocument) => {
+		let changedPromise = new Promise((resolve: (value: any) => any) => {
+			uriChangeResolvers.set(doc.uri, function() { resolve(true); });
+		});
 		return vscode.window.showTextDocument(doc).then((editor: vscode.TextEditor) => {
-			return editor.edit((editBuilder: vscode.TextEditorEdit): void => {
-				editBuilder.insert(new vscode.Position(0, 0), initialText);
-			}).then((success: boolean) => {
-				assert.strictEqual(true, success);
-				editor.selection = selection;
-				return vscode.commands.executeCommand("reflow-paragraph.reflow");
-			}).then(() => {
-				assert.strictEqual(expectedText, doc.getText());
-			});
+			editor.options.tabSize = 2;
+			editor.selection = selection;
+			return vscode.commands.executeCommand("reflow-paragraph.reflow");
+		}).then(() => {
+			return changedPromise;
+		}).then(() => {
+			assert.strictEqual(doc.getText(), expectedText);
 		});
 	});
-	vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+	await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 }
 
 suite('Web Extension Test Suite', () => {
+	const disposable = vscode.workspace.onDidChangeTextDocument((e: vscode.TextDocumentChangeEvent): void => {
+		const func = uriChangeResolvers.get(e.document.uri);
+		if (func !== undefined)
+			func.apply(this);
+	});
 
 	test('Test plain text', async function () {
+		this.timeout(3000);
 		const initialText = [
 			"This is a line of test that should get wrapped after 80 characters. Part of this sentence should move to line 2.",
 		].join("\n");
@@ -31,10 +41,11 @@ suite('Web Extension Test Suite', () => {
 			"This is a line of test that should get wrapped after 80 characters. Part of this",
 			"sentence should move to line 2.",
 		].join("\n");
-		testReflow(initialText, expectedText, new vscode.Selection(0, 0, 0, 0));
+		await testReflow(initialText, expectedText, new vscode.Selection(0, 0, 0, 0));
 	});
 
 	test('Test plain text multi-line', async function () {
+		this.timeout(3000);
 		const initialText = [
 			"This is a line of test that should get",
 			"wrapped after 80 characters. Part of this sentence should move to line 2.",
@@ -43,10 +54,11 @@ suite('Web Extension Test Suite', () => {
 			"This is a line of test that should get wrapped after 80 characters. Part of this",
 			"sentence should move to line 2.",
 		].join("\n");
-		testReflow(initialText, expectedText, new vscode.Selection(0, 0, 0, 0));
+		await testReflow(initialText, expectedText, new vscode.Selection(0, 0, 0, 0));
 	});
 
 	test('Single line comment not extending to next line', async function () {
+		this.timeout(3000);
 		const initialText = [
 			"// This is a line of test that should get wrapped after 80 characters. Part of this sentence should move to line 2.",
 			"	// This is a line of test that should get wrapped after 80 characters. Part of this sentence should move to line 2.",
@@ -56,10 +68,11 @@ suite('Web Extension Test Suite', () => {
 			"// this sentence should move to line 2.",
 			"	// This is a line of test that should get wrapped after 80 characters. Part of this sentence should move to line 2."
 		].join("\n");
-		testReflow(initialText, expectedText, new vscode.Selection(0, 0, 0, 0));
+		await testReflow(initialText, expectedText, new vscode.Selection(0, 0, 0, 0));
 	});
 
 	test('Single line comment not extending to previous line', async function () {
+		this.timeout(3000);
 		const initialText = [
 			"// This is a line of test that should get wrapped after 80 characters. Part of this sentence should move to line 2.",
 			"	// This is a line of test that should get wrapped after 80 characters. Part of this sentence should move to line 2.",
@@ -69,10 +82,11 @@ suite('Web Extension Test Suite', () => {
 			"	// This is a line of test that should get wrapped after 80 characters. Part of",
 			"	// this sentence should move to line 2."
 		].join("\n");
-		testReflow(initialText, expectedText, new vscode.Selection(1, 0, 1, 0));
+		await testReflow(initialText, expectedText, new vscode.Selection(1, 0, 1, 0));
 	});
 
 	test('Single line comment select explicit', async function () {
+		this.timeout(3000);
 		const initialText = [
 			"// This is a line of test that should get wrapped after 80 characters. Part of this sentence should move to line 2.",
 			"// This is a line of test that should get wrapped after 80 characters. Part of this sentence should move to line 2.",
@@ -81,26 +95,30 @@ suite('Web Extension Test Suite', () => {
 		const expectedText = [
 			"// This is a line of test that should get wrapped after 80 characters. Part of",
 			"// this sentence should move to line 2. This is a line of test that should get",
-			"// wrapped after 80 characters. Part of",
+			"// wrapped after 80 characters. Part of this sentence should move to line 2.",
 			"// This is a line won't be selected."
 		].join("\n");
-		testReflow(initialText, expectedText, new vscode.Selection(1, 0, 2, 123));
+		await testReflow(initialText, expectedText, new vscode.Selection(0, 0, 1, 115));
 	});
 
 	test('Block comment', async function () {
+		this.timeout(3000);
 		const initialText = [
 			"/** This is a line of test that should get wrapped after 80 characters. Part of this sentence should move to line 2. */",
+			"class A"
 		].join("\n");
 		const expectedText = [
 			"/**",
 			" * This is a line of test that should get wrapped after 80 characters. Part of",
 			" * this sentence should move to line 2.",
-			" */"
+			" */",
+			"class A"
 		].join("\n");
-		testReflow(initialText, expectedText, new vscode.Selection(1, 0, 1, 0));
+		await testReflow(initialText, expectedText, new vscode.Selection(0, 0, 0, 0));
 	});
 
 	test('Block comment multiple sections', async function () {
+		this.timeout(3000);
 		const initialText = [
 			"	/**",
 			"	 * This is a line of test that",
@@ -119,7 +137,7 @@ suite('Web Extension Test Suite', () => {
 			"	 * should get wrapped after 80 characters. Part of this sentence should move to line 2.",
 			"	 */"
 		].join("\n");
-		testReflow(initialText, expectedText, new vscode.Selection(2, 10, 2, 10));
+		await testReflow(initialText, expectedText, new vscode.Selection(2, 10, 2, 10));
 	});
 
 	// Close editors
