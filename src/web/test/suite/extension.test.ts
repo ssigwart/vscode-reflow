@@ -140,6 +140,81 @@ suite('Web Extension Test Suite', () => {
 		await testReflow(initialText, expectedText, new vscode.Selection(2, 10, 2, 10));
 	});
 
+	test('Issue #1: Line 1', async function () {
+		this.timeout(3000);
+		const initialText = [
+			"// test1",
+			"//test2",
+			"// test3",
+			"// test4"
+		].join("\n");
+		const expectedText = [
+			"// test1",
+			"//test2",
+			"// test3",
+			"// test4"
+		].join("\n");
+		await testReflow(initialText, expectedText, new vscode.Selection(0, 0, 0, 0));
+	});
+	test('Issue #1: Line 2', async function () {
+		this.timeout(3000);
+		const initialText = [
+			"// test1",
+			"//test2",
+			"// test3",
+			"// test4"
+		].join("\n");
+		const expectedText = [
+			"// test1",
+			"// test2 test3 test4"
+		].join("\n");
+		await testReflow(initialText, expectedText, new vscode.Selection(1, 0, 1, 0));
+	});
+	test('Issue #1: Line 2 selected', async function () {
+		this.timeout(3000);
+		const initialText = [
+			"// test1",
+			"//test2",
+			"// test3",
+			"// test4"
+		].join("\n");
+		const expectedText = [
+			"// test1",
+			"// test2",
+			"// test3",
+			"// test4"
+		].join("\n");
+		await testReflow(initialText, expectedText, new vscode.Selection(1, 0, 1, 6));
+	});
+	test('Issue #1: Line 3', async function () {
+		this.timeout(3000);
+		const initialText = [
+			"// test1",
+			"//test2",
+			"// test3",
+			"// test4"
+		].join("\n");
+		const expectedText = [
+			"// test1",
+			"//test2",
+			"// test3 test4"
+		].join("\n");
+		await testReflow(initialText, expectedText, new vscode.Selection(2, 0, 2, 0));
+	});
+	test('Issue #1: Lines 1 - 4 selected', async function () {
+		this.timeout(3000);
+		const initialText = [
+			"// test1",
+			"//test2",
+			"// test3",
+			"// test4"
+		].join("\n");
+		const expectedText = [
+			"// test1 test2 test3 test4"
+		].join("\n");
+		await testReflow(initialText, expectedText, new vscode.Selection(0, 0, 3, 6));
+	});
+
 	// Close editors
 	vscode.commands.executeCommand('workbench.action.closeAllEditors');
 });

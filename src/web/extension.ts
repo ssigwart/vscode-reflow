@@ -98,9 +98,11 @@ function getReflowCommand(): vscode.Disposable
 			if (initialTextMatch === null)
 				initialTextMatch = /^\s+/.exec(text);
 			let prefix = "";
+			let originalPrefixLen = 0;
 			if (initialTextMatch !== null)
 			{
 				prefix = initialTextMatch[0];
+				originalPrefixLen = prefix.length;
 				if (!/\s$/.test(prefix))
 					prefix += " ";
 			}
@@ -112,9 +114,9 @@ function getReflowCommand(): vscode.Disposable
 			if (prefix !== "")
 			{
 				if (/^\s*\/?\*/.test(prefix))
-					text = prefix + text.substring(prefix.length).replace(/^\s*[*]\s/mg, '');
+					text = prefix + text.substring(originalPrefixLen).replace(/^\s*[*]\s/mg, '');
 				else if (/^\s*\/\//.test(prefix))
-					text = prefix + text.substring(prefix.length).replace(/^\s*\/\/\s/mg, '');
+					text = prefix + text.substring(originalPrefixLen).replace(/^\s*\/\/\s?/mg, '');
 			}
 
 			// Build new text
